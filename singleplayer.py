@@ -8,28 +8,64 @@ import socket
 
 coronaimage = pygame.image.load('virus.png')
 coronaimage = pygame.transform.scale(coronaimage, (20, 20))
-HOSTNAME = input('\033[1;32;40mEnter server IP address: ')  # enter the public ip of your server
-print('\033[1;30;40m')
+ballspeed = 5
+speedlist = [ballspeed, -1 * ballspeed, ballspeed / 2, -1 * (ballspeed / 2)]
+ballxvar = random.choice(speedlist)
+ballyvar = random.choice(speedlist)
+player_number = random.randrange(1, 5)
 
+def update_ball():
+    global ballx, bally, player1y, player2y, player3x, player4x, ballxvar, ballyvar
+    global score1, score2, score3, score4
 
-def open_connection():
-    global clientsocket, buf
-    port = 1234
-    buf = 1024
-    print(1)
-    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print(2)
-    clientsocket.connect((HOSTNAME, port))
-    print(3)
+    if ballx <= 20 and (bally >= player1y and bally <= (player1y + (80 + 1)) or player_number != 1):
+        ballx = 20
+        ballxvar = ballxvar * -1.1
+        ballyvar = ballyvar * 1.1
 
+    if ballx >= (width - 40) and (bally >= player2y and bally <= (player2y + (80 + 2)) or player_number != 2):
+        ballx = width - 40
+        ballxvar = ballxvar * -1.1
+        ballyvar = ballyvar * 1.1
 
-def server_send(js_str):
-    clientsocket.send(js_str.encode('utf-8'))
-    return clientsocket.recv(buf).decode('utf-8')
+    if bally <= 20 and (ballx >= player3x and ballx <= (player3x + (80 + 3)) or player_number != 3):
+        bally = 20
+        ballyvar = ballyvar * -1.1
+        ballxvar = ballxvar * 1.1
 
+    if bally >= (height - 40) and (ballx >= player4x and ballx <= (player4x + (4 + 80)) or player_number != 4):
+        bally = height - 40
+        ballyvar = ballyvar * -1.1
+        ballxvar = ballxvar * 1.1
 
-def close_connection():
-    clientsocket.close()
+    if ballx <= 0 or ballx >= width - 20 or bally <= 0 or bally >= height - 20:
+        if ballx <= 0:
+            score2 += 1
+            score4 += 1
+            score3 += 1
+        if ballx >= width - 20:
+            score1 += 1
+            score3 += 1
+            score4 += 1
+        if bally <= 0:
+            score4 += 1
+            score1 += 1
+            score2 += 1
+        if bally >= height - 20:
+            score1 += 1
+            score2 += 1
+            score3 += 1
+        player1y = height / 2 - (100 + 1)
+        player2y = height / 2 - (100 + 2)
+        player3x = width / 2 - (50 + 3)
+        player4x = width / 2 - (50 + 4)
+        ballx = random.randint(300, width - 300)
+        bally = random.randint(300, height - 300)
+        ballxvar = random.choice(speedlist)
+        ballyvar = random.choice(speedlist)
+
+    ballx += ballxvar
+    bally += ballyvar
 
 
 def init():
@@ -53,7 +89,6 @@ def init():
     score2 = 0
     score3 = 0
     score4 = 0
-    set_scores()
 
     height = 800
     width = 800
@@ -91,9 +126,8 @@ def init():
     player3x = width / 2 - 50
     player4x = width / 2 - 50
 
-    ballx = 0
-    bally = 0
-    set_ball()
+    ballx = 400
+    bally = 400
 
     myCanvas.fill((0, 0, 0))
     pygame.draw.rect(myCanvas, red, (0, player1y, 20, 100 + 1),
@@ -109,54 +143,13 @@ def init():
     myWindow.blit(score2display, score2rect)
     myWindow.blit(score3display, score3rect)
     myWindow.blit(score4display, score4rect)
-    myWindow.blit(coronaimage, (ballx, bally, 400))
+    myWindow.blit(coronaimage, (ballx, bally))
     pygame.display.flip()
     time.sleep(1)
 
 
-def receive_server_data(idata):
-    return json.loads(server_send(json.dumps(idata)))
-
-
-def set_player():
-    global player_number
-    player_number = receive_server_data({'get': True, 'action': 'get_player_number'})['number']
-
-
-def set_scores():
-    global score1, score2, score3, score4
-    data = receive_server_data({'get': True, 'action': 'get_scores'})
-    score1 = data['score1']
-    score2 = data['score2']
-    score3 = data['score3']
-    score4 = data['score4']
-
-
 def set_ball():
-    global ballx, bally
-    data = receive_server_data({'get': True, 'action': 'get_ball'})
-    ballx = data['ballx']
-    bally = data['bally']
-
-
-def update(data):
-    global player1y, player2y, player3x, player4x
-    try:
-        player1y = int(data['player1y'])
-    except Exception:
-        print('Can\'t set player1y')
-    try:
-        player2y = int(data['player2y'])
-    except Exception:
-        print('Can\'t set player2y')
-    try:
-        player3x = int(data['player3x'])
-    except Exception:
-        print('Can\'t set player3x')
-    try:
-        player4x = int(data['player4x'])
-    except Exception:
-        print('Can\'t set player4x')
+    update_ball()
 
 
 def main():
@@ -166,7 +159,6 @@ def main():
     global ballx, bally, ballxvar, ballyvar, player_number
     global score1display, score1rect, score2display, score2rect, score3display, score3rect, score4display, score4rect
     running = True
-    set_player()
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -190,10 +182,10 @@ def main():
                     print('P3 wins!')
                 if score4 > score3 and score4 > score1 and score2 < score4:
                     print('P4 wins!')
-                receive_server_data({'get': True, 'action': 'quit', 'number': player_number})
+                #receive_server_data({'get': True, 'action': 'quit', 'number': player_number})
                 running = False
         myClock.tick(30)
-        update(receive_server_data({'get': True, 'action': 'get_updates'}))
+        #update(receive_server_data({'get': True, 'action': 'get_updates'}))
         myCanvas.fill((0, 0, 0))
         pygame.draw.rect(myCanvas, red, (0, player1y, 20, 100
                                          + 1), 0)
@@ -213,7 +205,7 @@ def main():
 
         # Keeping score
         set_ball()
-        set_scores()
+        #set_scores()
 
         score1display = myFont.render(str(score1), True, red)
         score1rect = score1display.get_rect()
@@ -237,35 +229,35 @@ def main():
         if keys[pygame.locals.K_w]:
             if player_number == 1 and player1y >= 0:
                 player1y -= 20
-                receive_server_data({'get': False, 'set': 'player1y', 'value': player1y})
+                #receive_server_data({'get': False, 'set': 'player1y', 'value': player1y})
             elif player_number == 2 and player2y >= 0:
                 player2y -= 20
-                receive_server_data({'get': False, 'set': 'player2y', 'value': player2y})
+                #receive_server_data({'get': False, 'set': 'player2y', 'value': player2y})
         elif keys[pygame.locals.K_s]:
             if player_number == 1 and player1y <= height - 101:
                 player1y += 20
-                receive_server_data({'get': False, 'set': 'player1y', 'value': player1y})
+                #receive_server_data({'get': False, 'set': 'player1y', 'value': player1y})
             elif player_number == 2 and player2y <= height - 102:
                 player2y += 20
-                receive_server_data({'get': False, 'set': 'player2y', 'value': player2y})
+                #receive_server_data({'get': False, 'set': 'player2y', 'value': player2y})
         elif keys[pygame.locals.K_a]:
             if player_number == 3 and player3x >= 0:
                 player3x -= 20
-                receive_server_data({'get': False, 'set': 'player3x', 'value': player3x})
+                #receive_server_data({'get': False, 'set': 'player3x', 'value': player3x})
             elif player_number == 4 and player4x >= 0:
                 player4x -= 20
-                receive_server_data({'get': False, 'set': 'player4x', 'value': player4x})
+                #receive_server_data({'get': False, 'set': 'player4x', 'value': player4x})
         elif keys[pygame.locals.K_d]:
             if player_number == 3 and player3x <= width - 103:
                 player3x += 20
-                receive_server_data({'get': False, 'set': 'player3x', 'value': player3x})
+                #receive_server_data({'get': False, 'set': 'player3x', 'value': player3x})
             elif player_number == 4 and player4x <= width - 104:
                 player4x += 20
-                receive_server_data({'get': False, 'set': 'player4x', 'value': player4x})
+                #receive_server_data({'get': False, 'set': 'player4x', 'value': player4x})
 
-    close_connection()
+    #close_connection()
 
 
-open_connection()
+#open_connection()
 init()
 main()

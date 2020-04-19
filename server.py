@@ -22,7 +22,7 @@ def start_server():
     global serversocket, clients, numbers_pool, ballspeed, height, width, speedlist
     port = 1234
 
-    addr = (HOSTNAME, port)
+    addr = ("127.0.0.1", port)
 
     serversocket = socket(AF_INET, SOCK_STREAM)
     serversocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -139,7 +139,6 @@ def handler(clientsocket, clientaddr):
     while running:
         data = clientsocket.recv(1024).decode('utf-8')
         data = json.loads(data)
-        update_ball()
         response = json.dumps(processing(data))
         if response != 'exit':
             clientsocket.send(f'{response}'.encode('utf-8'))
@@ -150,7 +149,7 @@ def handler(clientsocket, clientaddr):
 
 
 def updater_hull(n):
-    while len(clients) != 0:
+    while len(clients) > 0:
         update_ball()
         time.sleep(30)
 
@@ -169,13 +168,16 @@ def main():
     player3x = width / 2 - (50 + 3)
     player4x = width / 2 - (50 + 4)
     score1, score2, score3, score4 = 0, 0, 0, 0
-    _thread.start_new_thread(updater_hull, (1,))
+    #_thread.start_new_thread(updater_hull, (1,))
     while True:
         try:
             print("Server is listening for connections\n")
+            print(1)
             clientsocket, clientaddr = serversocket.accept()
             clients.add(clientsocket)
-            _thread.start_new_thread(handler, (clientsocket, clientaddr))
+            print(2)
+            #_thread.start_new_thread(handler, (clientsocket, clientaddr))
+            print(3)
         except KeyboardInterrupt:
             print("Closing server socket...")
             serversocket.close()
